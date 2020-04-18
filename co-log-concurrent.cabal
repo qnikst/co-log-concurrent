@@ -3,12 +3,12 @@ name:                co-log-concurrent
 version:             0.4.0.0
 synopsis:            Asynchronous backend for co-log library
 description:         Buiding block for writing asynchronous logger pipelines.
-homepage:            https://github.com/qnikst/co-log
+homepage:            https://github.com/qnikst/co-log-concurrent/
 bug-reports:         https://github.com/qnikst/co-log-concurrent/issues
 license:             MPL-2.0
 author:              Alexander Vershilov
 maintainer:          alexander.vershilov@gmail.com
-copyright:           2018-2020 Kowainik, 2020 - Alexander Vershilov
+copyright:           2018-2020 Kowainik, 2020 Alexander Vershilov
 category:            Logging, Contravariant, Comonad
 stability:           provisional
 build-type:          Simple

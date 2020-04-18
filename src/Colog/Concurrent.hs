@@ -79,6 +79,7 @@ Concurrent logger consists of the following building blocks (see schema below).
   3. *Logger thread*. It's a background thread that performs an actual synchronous
      write to the log sinks. Loggers there do not have access to the users' thread
      state.
+
 @
    +-------------------------+                  +--------------------------------+
    |                         |                  | Logger        |   Sink-1       |
