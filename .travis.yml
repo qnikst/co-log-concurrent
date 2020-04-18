@@ -20,7 +20,8 @@ matrix:
   - ghc: 8.4.4
   - ghc: 8.6.5
   - ghc: 8.8.2
-  - ghc: 8.10.1
+  # is not supported by the co-log-core yet.
+  # - ghc: 8.10.1
 
   # stack
   - ghc: 8.8.3
