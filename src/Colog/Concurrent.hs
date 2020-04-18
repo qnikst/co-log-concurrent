@@ -3,33 +3,29 @@ Copyright:  (c) 2018-2020 Kowainik, (c) 2020 Alexander Vershilov
 SPDX-License-Identifier: MPL-2.0
 Maintainer: Alexander Vershilov <alexander.vershilov@gmail.com>
 
-For the speed reasons you may want to dump logs asynchronously.
-This is especially useful when application threads are CPU
+For the speed reasons, you may want to dump logs asynchronously.
+It is especially useful when application threads are CPU
 bound while logs emitting is I/O bound. This approach
-allows to mitigate bottlenecks from the I/O.
+allows mitigating bottlenecks from the I/O.
 
 When writing an application user should be aware of the tradeoffs
-that concurrent log system can provide, in this module we explain
-potential tradeoffs and describe if certain building blocks are
+that concurrent log system can provide, in this module, we explain
+potential tradeoffs and describe if individual building blocks are
 affected or not.
 
-  1. Unbounded memory usage - if there is no backpressure mechanism
-  the user threads, they may generate more logs that can be
-  written in the same amount of time. In those cases messages will
-  be accumulated in memory. That will lead to extended GC times and
-  application may be killed by the operating systems mechanisms.
-
-  2. Persistence requirement - sometimes application may want to
-  ensure that logs were written before it can continue. This is not
-  a case with concurrent log systems in general, and some logs may
-  be lost when application exits before dumping all logs.
-
-  3. Non-precise logging - sometimes it may happen that there can be
-  logs reordering (in case if thread was moved to another capability).
+  1. _Unbounded memory usage_ - if there is no backpressure mechanism the user threads,
+     threads may generate more logs that can we can store at the same amount of time.
+     In such cases messages are accumulated in memory. It extends GC times and memory usage.
+  2. _Persistence requirements_ - sometimes application may want to ensure that
+     we persisted the logs before it moved to the next statement. It is not a case with
+     concurrent log systems in general; some we lose logs even the thread moves forward.
+     It may happen when the application exits before dumping all logs.
+  3. _Non-precise logging_ - sometimes there may be anomalies when storing logs,
+     such as logs reordering or imprecise timestamps.
 
 In case if your application is a subject of those problems you may
 consider not using concurrent logging system in other cases concurrent
-logger may be a good default for you.
+logging may be a good default for you.
 -}
 
 module Colog.Concurrent
@@ -70,50 +66,42 @@ import Colog.Core.Action (LogAction (..))
 
 
 {- $general
+Concurrent logger consists of the following building blocks (see schema below).
 
-Concurrent logger consists of the basic parts (see schema below).
-
-  1. Logger in application thread. This logger is evaluated in the
-  application thread and has an access to all the context available
-  in that thread and monad, this logger can work in any @m@.
-
-  2. Communication channel with backpressure support. In addition to
-  the channel we have a converter that puts the user message to the
-  communication channel. This converter works in the user thread.
-  Such a logger usually works in 'IO' but it's possible to make it
-  work in 'Control.Concurrent.STM.STM' as well. At this point library provides only 'IO'
-  version, but it can be lifted to any 'MonadIO' by the user.
-
-  3. Logger thread. This is the thread that performs actual write to
-  the sinks. Loggers there do not have access to the users thread
-  state, unless that state was passed in the message.
-
-
+  1. *Logger in the application thread*. The application runs it in the main thread,
+      and it has access to all the thread state. This logger can work in any @m@.
+  2. *Communication channel with backpressure support*. In addition to the channel,
+      we have a converter that puts the user message to the communication channel.
+      This converter works in the user thread. Such a logger usually works in 'IO',
+      but it's possible to make it work in 'Control.Concurrent.STM.STM' as well.
+      At this point, the library provides only 'IO' version, but it can be lifted
+      to any 'MonadIO' by the user.
+  3. *Logger thread*. It's a background thread that performs an actual synchronous
+     write to the log sinks. Loggers there do not have access to the users' thread
+     state.
+@
+   +-------------------------+                  +--------------------------------+
+   |                         |                  | Logger        |   Sink-1       |
+   |   Application Thread    |                  | Thread    +--->                |
+   |   -----------------     |  +-----------+   |           |   +----------------+
+   |                         |  |           |   +---------+ |   +----------------+
+   |           +-------------+  |  channel  |   | Shared  +----->   Sink-2       |
+   |           | application||  |          +----> logger  | |   |                |
+   |           | logger    +----->          |   +---------+ |   +----------------+
+   |           +-------------+  |           |   |           |   +----------------+
+   |                         |  +-----------+   |           +--->   Sink3        |
+   |                         |                  |               |                |
+   |                         |                  |               +----------------+
+   |                         |                  |                                |
+   +-------------------------+                  +--------------------------------+
 @
 
- +-------------------------+                  +--------------------------------+
- |                         |                  | Logger        |   Sink-1       |
- |   Application Thread    |                  | Thread    +--->                |
- |   -----------------     |  +-----------+   |           |   +----------------+
- |                         |  |           |   +---------+ |   +----------------+
- |           +-------------+  |  channel  |   | Shared  +----->   Sink-2       |
- |           | application||  |          +----> logger  | |   |                |
- |           | logger    +----->          |   +---------+ |   +----------------+
- |           +-------------+  |           |   |           |   +----------------+
- |                         |  +-----------+   |           +--->   Sink3        |
- |                         |                  |               |                |
- |                         |                  |               +----------------+
- |                         |                  |                                |
- +-------------------------+                  +--------------------------------+
-@
-
-So usually user should write the logging system in the way that all 'LogAction'
+So usually user should write the logging system in the way that all 'LogAction.'
 that populate and filter information should live in the application logger.
-All loggers that do serialization and formatting should live in shared logger.
+All loggers that do serialization and formatting should live in the shared logger.
 
 
-If more concurrency is needed it's possible to build multilayer systems:
-
+If you need more concurrency it's possible to build multilayer systems:
 
 @
   +-------------+                         +-------+
@@ -125,25 +113,25 @@ If more concurrency is needed it's possible to build multilayer systems:
                                           +-------+
 @
 
-In this approach application will be concurrently write logs to the logger, then
-logger will be concurrently writing to all sinks.
+In this approach, the application concurrently writes logs to the logger,
+then the logger concurrently writing to all sinks.
 -}
 
 {- $simple-api
-
 Simple API provides a handy easy to use API that can be used directly
-in application without dealing with internals. Based on users feedback
-internal implementation of the simple API may change, especially in early
+in an application without dealing with internals. Based on users feedback,
+the internal implementation of the simple API may change, especially in early
 versions of the library. But the guarantee that we give is that no matter
-what implementation is it will be kept with reasonable defaults and will
-be applicable to a generic application.
+what implementation is, it keeps with reasonable defaults and can be applied
+to a generic application.
 -}
 
-{- | An exception safe way to create background logger.  This method will fork
-a thread that will run 'shared worker', see schema above.
+{- | 
+An exception-safe way to create background logger.  This method forks
+a thread that runs 'shared worker', see schema above.
 
 @Capacity@ - provides a backpressure mechanism and tells how many messages
-in flight are allowed. In most cases 'defCapacity' will work well.
+in-flight are allowed. In most cases, 'defCapacity' works well.
 See 'forkBackgroundLogger' for more details.
 
 @LogAction@ - provides a logger action, this action does not have access to the
@@ -181,13 +169,13 @@ defCapacity = Capacity 4096
 {- $extended-api
 
 Extended API explains how asynchronous logging is working and provides basic
-building blocks for writing your own combinators. This is the part of the public
-API and will not change without prior notice.
+building blocks for writing your combinators. It is the part of the public API
+and does not change without prior notice.
 -}
 
 {- $background-worker
-The main abstraction for the concurrent worker is 'BackgroundWorker'. This
-is a wrapper of the thread, that has communication channel to talk to, and threadId.
+The main abstraction for the concurrent worker is 'BackgroundWorker'.
+It is a wrapper of the thread, that has a communication channel to talk to and threadId.
 
 Background worker may provide a backpressure mechanism, but does not provide
 notification of completeness unless it's included in the message itself.
@@ -205,8 +193,8 @@ killBackgroundLogger bl = do
 
 {- $background-logger
 
-Background logger is specialized version of the 'BackgroundWorker' process.
-Instead of running any job it will accept @msg@ type
+Background logger is a specialized version of the 'BackgroundWorker' process.
+Instead of running any job it accepts @msg@ type
 instead and process it with a single logger defined at creation time.
 -}
 
@@ -214,14 +202,14 @@ instead and process it with a single logger defined at creation time.
 takes a 'LogAction' that should describe how to write
 logs.
 
-@capacity@ - parameter tells how many in flight messages are allowed,
-if that value is reached then user's thread that emits logs will be
-blocked until any message will be written. Usually if value should be
+@capacity@ - parameter tells how many in-flight messages are allowed,
+if that value is reached then user's thread that emits logs is
+blocked until any message is written. Usually, if the value is
 chosen reasonably high and if this value is reached it means that
-the application environment experience severe problems.
+the application environment experiences severe problems.
 
-__N.B.__ The 'LogAction' will be run in the background
-thread so that logger should not add any thread specific
+__N.B.__ The 'LogAction' is run in the background
+thread so that logger should not add any thread-specific
 context to the message.
 
 __N.B.__ On exit, even in case of exception thread will dump all values
