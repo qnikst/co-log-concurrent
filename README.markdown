@@ -26,7 +26,8 @@ In general asynchronous logging has some downsides.
 
 ## How to use?
 
-For a general description of the co-log framework refer to the (co-log documentation)[https://github.com/kowainik/co-log/blob/master/co-log/tutorials/1-intro/Intro.md] it's always up to date with the latest library version. In this tutorial, we concentrate on the co-log-concurrent alone.
+For a general description of the co-log framework refer to the [co-log documentation](https://github.com/kowainik/co-log/blob/master/co-log/tutorials/1-intro/Intro.md)
+it's always up to date with the latest library version. In this tutorial, we concentrate on the co-log-concurrent alone.
 
 ### Simple case
 

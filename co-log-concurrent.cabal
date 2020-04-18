@@ -2,7 +2,7 @@ cabal-version:       2.4
 name:                co-log-concurrent
 version:             0.4.0.0
 synopsis:            Asynchronous backend for co-log library
-description:
+description:         Buiding block for writing asynchronous logger pipelines.
 homepage:            https://github.com/qnikst/co-log
 bug-reports:         https://github.com/qnikst/co-log-concurrent/issues
 license:             MPL-2.0
