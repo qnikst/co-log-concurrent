@@ -46,10 +46,7 @@ script:
     if [ -z "$STACK_YAML" ]; then
        cabal test all
     else
-      stack test  co-log-core      --system-ghc
-      stack test  co-log           --system-ghc
-      stack test  co-log-polysemy  --system-ghc
-      stack build co-log-benchmark --system-ghc
+      stack test  co-log-concurrent --system-ghc
     fi
 
 notifications:
