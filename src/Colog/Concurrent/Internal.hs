@@ -12,6 +12,7 @@ changed without a version bump.
 module Colog.Concurrent.Internal
        ( BackgroundWorker (..)
        , Capacity (..)
+       , mkCapacity
        ) where
 
 import Control.Concurrent (ThreadId)
@@ -27,6 +28,12 @@ newtype Capacity = Capacity Natural
 #else
 newtype Capacity = Capacity Int
 #endif
+
+-- | Create new capacity.
+--
+-- @since 0.5.0.0
+mkCapacity :: Natural -> Capacity
+mkCapacity = Capacity . fromIntegral
 
 {- | Wrapper for the background thread that may receive messages to
 process.

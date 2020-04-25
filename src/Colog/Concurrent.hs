@@ -41,6 +41,7 @@ module Colog.Concurrent
        , BackgroundWorker
        , backgroundWorkerWrite
        , killBackgroundLogger
+       , mkCapacity
          -- ** Background logger
        , forkBackgroundLogger
        , convertToLogAction
@@ -61,7 +62,7 @@ import Control.Monad (forever, join)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Foldable (for_)
 
-import Colog.Concurrent.Internal (BackgroundWorker (..), Capacity (..))
+import Colog.Concurrent.Internal (BackgroundWorker (..), Capacity (..), mkCapacity)
 import Colog.Core.Action (LogAction (..))
 
 
