@@ -58,6 +58,7 @@ main :: IO ()
 main =
   withBackgroundLogger
     defCapacity
+    (pure ())
     logByteStringStdout $ \log ->
       usingLoggerT log $ do
         logMsg @ByteString "Starting application..."
