@@ -53,14 +53,15 @@ module Colog.Concurrent
          -- $worker-thread-usage
        ) where
 
-import Control.Applicative (many)
+import Control.Applicative (many, (<|>), some)
 import Control.Concurrent (forkFinally, killThread)
-import Control.Concurrent.STM (atomically, check, newTVarIO, readTVar, writeTVar)
+import Control.Concurrent.STM (STM, atomically, check, newTVarIO, readTVar, writeTVar)
 import Control.Concurrent.STM.TBQueue (newTBQueueIO, readTBQueue, writeTBQueue)
 import Control.Exception (bracket, finally)
 import Control.Monad (forever, join)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Foldable (for_)
+import Numeric.Natural (Natural)
 
 import Colog.Concurrent.Internal (BackgroundWorker (..), Capacity (..), mkCapacity)
 import Colog.Core.Action (LogAction (..))
@@ -140,12 +141,16 @@ See 'forkBackgroundLogger' for more details.
 application state or thread info, so you should only pass methods that serialize
 and dump data there.
 
+@IO ()@ - flush provides a function to flush all the logs, it allows flush logs
+by chunks, so @LogAction@ may not care about flushing.
+
 @
 main :: IO ()
 main =
   'withBackgroundLogger'
      'defCapacity'
      'Colog.Actions.logByteStringStdout'
+     '(pure ())
      (\log -> 'Colog.Monad.usingLoggerT' log $ __do__
         'Colog.Monad.logMsg' \@ByteString "Starting application..."
         'Colog.Monad.logMsg' \@ByteString "Finishing application..."
@@ -156,16 +161,17 @@ withBackgroundLogger
     :: MonadIO m
     => Capacity  -- ^ Capacity of messages to handle; bounded channel size
     -> LogAction IO msg  -- ^ Action that will be used in a forked thread
+    -> IO () -- ^ Action to flush logs
     -> (LogAction m msg -> IO a)  -- ^ Continuation action
     -> IO a
-withBackgroundLogger cap logger action =
-   bracket (forkBackgroundLogger cap logger)
+withBackgroundLogger cap logger flush action =
+   bracket (forkBackgroundLogger cap logger flush)
            killBackgroundLogger
            (action . convertToLogAction)
 
 -- | Default capacity size, (4096)
 defCapacity :: Capacity
-defCapacity = Capacity 4096
+defCapacity = Capacity 4096 (Just 32)
 
 
 {- $extended-api
@@ -218,19 +224,30 @@ __N.B.__ On exit, even in case of exception thread will dump all values
 that are in the queue. But it will stop doing that in case if another
 exception will happen.
 -}
-forkBackgroundLogger :: Capacity -> LogAction IO msg -> IO (BackgroundWorker msg)
-forkBackgroundLogger (Capacity cap) logAction = do
+forkBackgroundLogger :: Capacity -> LogAction IO msg -> IO () -> IO (BackgroundWorker msg)
+forkBackgroundLogger (Capacity cap lim) logAction flush = do
   queue <- newTBQueueIO cap
   isAlive <- newTVarIO True
   tid <- forkFinally
     (forever $ do
-      msg <- atomically $ readTBQueue queue
-      unLogAction logAction msg)
+      msgs <- atomically $ fetch $ readTBQueue queue
+      for_ msgs $ unLogAction logAction
+      flush)
     (\_ ->
        (do msgs <- atomically $ many $ readTBQueue queue
-           for_ msgs $ unLogAction logAction)
+           for_ msgs $ unLogAction logAction
+           flush)
          `finally` atomically (writeTVar isAlive False))
   pure $ BackgroundWorker tid (writeTBQueue queue) isAlive
+  where
+    fetch 
+      | Just n <- lim = someN n
+      | otherwise = some
+    someN :: Natural -> STM a -> STM [a]
+    someN 0 _ = pure []
+    someN n f = (:) <$> f <*> go n where
+      go 0 = pure []
+      go k = ((:) <$> f <*> go (k-1)) <|> pure []
 
 
 {- | Convert a given 'BackgroundWorker msg' into a 'LogAction msg'
@@ -280,9 +297,13 @@ happening.
 When closed it will dump all pending messages, unless
 another asynchronous exception will arrive, or synchronous
 exception will happen during the logging.
+
+Note. Limit parameter of capacity is ignored here as the function
+performs IO actions and seems that doesn't benefit from the chunking.
+However it may change in the future versions if proved to be wrong.
 -}
 mkBackgroundThread :: Capacity -> IO (BackgroundWorker (IO ()))
-mkBackgroundThread (Capacity cap) = do
+mkBackgroundThread (Capacity cap _lim) = do
   queue <- newTBQueueIO cap
   isAlive <- newTVarIO True
   tid <- forkFinally

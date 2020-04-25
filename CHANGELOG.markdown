@@ -6,6 +6,8 @@
 
   - Introduce mkCapacity function, as previously it was not possible
     to create custom capacity.
+  - Fork background logger now takes an explicit flush action. And
+    reads logs in chunks.
 
 ## 0.4.0.0 -- 2020-04-18
 

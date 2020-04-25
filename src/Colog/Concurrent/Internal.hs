@@ -24,16 +24,24 @@ import Numeric.Natural (Natural)
 differrent for the different GHC versions.
 -}
 #if MIN_VERSION_stm(2,5,0)
-newtype Capacity = Capacity Natural
+data Capacity = Capacity Natural (Maybe Natural)
 #else
-newtype Capacity = Capacity Int
+data Capacity = Capacity Int (Maybe Natural)
 #endif
 
 -- | Create new capacity.
 --
 -- @since 0.5.0.0
-mkCapacity :: Natural -> Capacity
-mkCapacity = Capacity . fromIntegral
+mkCapacity
+  :: Natural -- ^ Size of the queue. Number of the messages in flight
+  -> Maybe Natural -- ^ Maximum number of messages that logger can read in a chunk.
+  -> Capacity
+mkCapacity n = Capacity (mk n)  where
+#if MIN_VERSION_stm(2,5,0)
+  mk = id
+#else
+  mk = fromIntegral
+#endif
 
 {- | Wrapper for the background thread that may receive messages to
 process.
