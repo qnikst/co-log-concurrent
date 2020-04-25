@@ -25,8 +25,10 @@ differrent for the different GHC versions.
 -}
 #if MIN_VERSION_stm(2,5,0)
 data Capacity = Capacity Natural (Maybe Natural)
+  deriving stock Show
 #else
 data Capacity = Capacity Int (Maybe Natural)
+  deriving stock Show
 #endif
 
 -- | Creates new capacity.
