@@ -34,6 +34,8 @@ module Colog.Concurrent
          -- $simple-api
          withBackgroundLogger
        , defCapacity
+         -- * Exceptions in messages
+         -- $exceptions
          -- * Extended API
          -- $extended-api
          -- ** Background worker
@@ -57,7 +59,7 @@ import Control.Applicative (many, (<|>), some)
 import Control.Concurrent (forkFinally, killThread)
 import Control.Concurrent.STM (STM, atomically, check, newTVarIO, readTVar, writeTVar)
 import Control.Concurrent.STM.TBQueue (newTBQueueIO, readTBQueue, writeTBQueue)
-import Control.Exception (bracket, finally)
+import Control.Exception (bracket, finally, mask_)
 import Control.Monad (forever, join)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Foldable (for_)
@@ -118,6 +120,7 @@ If you need more concurrency it's possible to build multilayer systems:
 
 In this approach, the application concurrently writes logs to the logger,
 then the logger concurrently writing to all sinks.
+
 -}
 
 {- $simple-api
@@ -127,6 +130,7 @@ the internal implementation of the simple API may change, especially in early
 versions of the library. But the guarantee that we give is that no matter
 what implementation is, it keeps with reasonable defaults and can be applied
 to a generic application.
+
 -}
 
 {- | 
@@ -172,6 +176,31 @@ withBackgroundLogger cap logger flush action =
 -- | Default capacity size, (4096)
 defCapacity :: Capacity
 defCapacity = Capacity 4096 (Just 32)
+
+{- $exceptions
+It worth discussing how the library handles exceptions in messages.  User generates a
+message in the application thread, but it's guaranteed to be evaluated only in
+the logger thread. It means that on the contrary to the synchronious logger it's
+possible to store exception in the message and it another thread, so the application
+thread will never see it.
+
+@
+let message = showt (1/0)
+unLogger logger message
+@
+
+In synchronous case exception will be rised in the thread, but in asynchronous thread
+exception will happen somewhere else.
+
+Currently the library does not take any action to prevent that. The problem is that
+there is no safe strategy that will work in general case. There are some approaches though:
+
+  1. Use deepseq to fully evaluate message before passing it to the logger.
+     Doesn't work for all types, leads to additional computations.
+  2. Require message to be WHNF-strict and call `seq` before sending message to the logger.
+  3. Serialize message in the user thread.
+-}
+
 
 
 {- $extended-api
@@ -223,6 +252,13 @@ context to the message.
 __N.B.__ On exit, even in case of exception thread will dump all values
 that are in the queue. But it will stop doing that in case if another
 exception will happen.
+
+*Exception handing*. 'forkBackoundLogger' forks a private that and does
+not expect that someone sends it an asynchronous exception. It means that
+any asynchronous exception is treated as a command to stop the worker.
+Logger is not aware of synchronous exceptions as well, so handing of the
+application specific exceptions should be a concern of the logging action.
+
 -}
 forkBackgroundLogger :: Capacity -> LogAction IO msg -> IO () -> IO (BackgroundWorker msg)
 forkBackgroundLogger (Capacity cap lim) logAction flush = do
@@ -231,11 +267,11 @@ forkBackgroundLogger (Capacity cap lim) logAction flush = do
   tid <- forkFinally
     (forever $ do
       msgs <- atomically $ fetch $ readTBQueue queue
-      for_ msgs $ unLogAction logAction
+      for_ msgs $ mask_ . unLogAction logAction
       flush)
     (\_ ->
        (do msgs <- atomically $ many $ readTBQueue queue
-           for_ msgs $ unLogAction logAction
+           for_ msgs $ mask_ . unLogAction logAction
            flush)
          `finally` atomically (writeTVar isAlive False))
   pure $ BackgroundWorker tid (writeTBQueue queue) isAlive
