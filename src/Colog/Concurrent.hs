@@ -13,14 +13,14 @@ that concurrent log system can provide, in this module, we explain
 potential tradeoffs and describe if individual building blocks are
 affected or not.
 
-  1. _Unbounded memory usage_ - if there is no backpressure mechanism the user threads,
+  1. __Unbound memory usage__ – if there is no backpressure mechanism the user threads,
      threads may generate more logs that can we can store at the same amount of time.
      In such cases messages are accumulated in memory. It extends GC times and memory usage.
-  2. _Persistence requirements_ - sometimes application may want to ensure that
+  2. __Persistence requirements__ – sometimes application may want to ensure that
      we persisted the logs before it moved to the next statement. It is not a case with
      concurrent log systems in general; some we lose logs even the thread moves forward.
      It may happen when the application exits before dumping all logs.
-  3. _Non-precise logging_ - sometimes there may be anomalies when storing logs,
+  3. __Non-precise logging__ – sometimes there may be anomalies when storing logs,
      such as logs reordering or imprecise timestamps.
 
 In case if your application is a subject of those problems you may
@@ -29,14 +29,17 @@ logging may be a good default for you.
 -}
 
 module Colog.Concurrent
-       ( -- $general
+       ( 
+         -- $general
+
          -- * Simple API.
          -- $simple-api
          withBackgroundLogger
        , defCapacity
-         -- * Exceptions in messages
+         -- * Exceptions in messages.
          -- $exceptions
-         -- * Extended API
+
+         -- * Extended API.
          -- $extended-api
          -- ** Background worker
          -- $background-worker
@@ -72,15 +75,15 @@ import Colog.Core.Action (LogAction (..))
 {- $general
 Concurrent logger consists of the following building blocks (see schema below).
 
-  1. *Logger in the application thread*. The application runs it in the main thread,
+  1. __Logger in the application thread__. The application runs it in the main thread,
       and it has access to all the thread state. This logger can work in any @m@.
-  2. *Communication channel with backpressure support*. In addition to the channel,
+  2. __Communication channel with backpressure support__. In addition to the channel,
       we have a converter that puts the user message to the communication channel.
       This converter works in the user thread. Such a logger usually works in 'IO',
       but it's possible to make it work in 'Control.Concurrent.STM.STM' as well.
       At this point, the library provides only 'IO' version, but it can be lifted
       to any 'MonadIO' by the user.
-  3. *Logger thread*. It's a background thread that performs an actual synchronous
+  3. __Logger thread__. It's a background thread that performs an actual synchronous
      write to the log sinks. Loggers there do not have access to the users' thread
      state.
 
@@ -154,7 +157,7 @@ main =
   'withBackgroundLogger'
      'defCapacity'
      'Colog.Actions.logByteStringStdout'
-     '(pure ())
+     ('pure' ())
      (\log -> 'Colog.Monad.usingLoggerT' log $ __do__
         'Colog.Monad.logMsg' \@ByteString "Starting application..."
         'Colog.Monad.logMsg' \@ByteString "Finishing application..."
@@ -173,7 +176,10 @@ withBackgroundLogger cap logger flush action =
            killBackgroundLogger
            (action . convertToLogAction)
 
--- | Default capacity size, (4096)
+-- | Default capacity size.
+--
+-- * 4096 messages that in flight
+-- * Up to 32 messages can be read in a single chunk
 defCapacity :: Capacity
 defCapacity = Capacity 4096 (Just 32)
 

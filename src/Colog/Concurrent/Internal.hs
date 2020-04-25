@@ -29,7 +29,7 @@ data Capacity = Capacity Natural (Maybe Natural)
 data Capacity = Capacity Int (Maybe Natural)
 #endif
 
--- | Create new capacity.
+-- | Creates new capacity.
 --
 -- @since 0.5.0.0
 mkCapacity
