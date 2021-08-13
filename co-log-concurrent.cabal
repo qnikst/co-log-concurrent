@@ -7,7 +7,7 @@ homepage:            https://github.com/qnikst/co-log-concurrent/
 bug-reports:         https://github.com/qnikst/co-log-concurrent/issues
 license:             MPL-2.0
 author:              Alexander Vershilov
-maintainer:          alexander.vershilov@gmail.com
+maintainer:          alexander.vershilov@sirius.online
 copyright:           2018-2020 Kowainik, 2020 Alexander Vershilov
 category:            Logging, Contravariant, Comonad
 stability:           provisional
@@ -17,7 +17,7 @@ extra-source-files:  CHANGELOG.markdown
 
 source-repository head
   type:                git
-  location:            https://github.com/qnikst/co-log-concurrent.git
+  location:            https://github.com/cheopslab/co-log-concurrent.git
 
 common common-options
   build-depends:       base >= 4.10.1.0 && < 4.16
