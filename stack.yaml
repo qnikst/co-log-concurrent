@@ -1,4 +1,7 @@
-resolver: lts-15.8
+resolver: lts-18.19
 
 packages:
   - ./
+
+extra-deps:
+  - co-log-core-0.3.1.0@sha256:9794bdedd1391decd0e22bdfe2b11abcb42e6cff7a4531e1f8882890828f4e63,3816
