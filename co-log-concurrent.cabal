@@ -16,18 +16,17 @@ extra-source-files:  CHANGELOG.markdown
                      README.markdown
 
 tested-with: 
-    GHC ==9.4.4
-     || ==9.2.2
+    GHC ==0.6.2
+     || ==9.4.4
      || ==8.10.7
      || ==8.8.4
-     || ==8.6.5
 
 source-repository head
   type:                git
   location:            https://github.com/cheopslab/co-log-concurrent.git
 
 common common-options
-  build-depends:       base >= 4.10.1.0 && < 4.18
+  build-depends:       base >= 4.10.1.0 && < 4.19
 
   ghc-options:         -Wall
                        -Wincomplete-uni-patterns
