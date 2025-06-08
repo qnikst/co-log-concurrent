@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                co-log-concurrent
-version:             0.5.1.0
+version:             0.5.1.1
 synopsis:            Asynchronous backend for co-log library
 description:         Buiding block for writing asynchronous logger pipelines.
 homepage:            https://github.com/qnikst/co-log-concurrent/
@@ -26,7 +26,7 @@ source-repository head
   location:            https://github.com/cheopslab/co-log-concurrent.git
 
 common common-options
-  build-depends:       base >= 4.10.1.0 && < 4.19
+  build-depends:       base >= 4.10.1.0 && < 4.20
 
   ghc-options:         -Wall
                        -Wincomplete-uni-patterns
