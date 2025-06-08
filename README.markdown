@@ -1,8 +1,6 @@
 [![Hackage](https://img.shields.io/hackage/v/co-log-concurrent.svg)](https://hackage.haskell.org/package/co-log-concurrent)
-[![Stackage LTS](http://stackage.org/package/co-log-concurrent/badge/lts)](http://stackage.org/lts/package/co-log-concurrent)
-[![Stackage Nightly](http://stackage.org/package/co-log-concurrent/badge/nightly)](http://stackage.org/nightly/package/co-log-concurrent)
 [![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/qnikst/co-log-concurrent/blob/master/LICENSE)
-[![Build status](https://secure.travis-ci.org/qnikst/co-log-concurrent.svg)](https://travis-ci.org/qnikst/co-log-concurrent)
+[![Haskell-CI](https://github.com/qnikst/co-log-concurrent/actions/workflows/haskell-ci.yml/badge.svg)](https://github.com/qnikst/co-log-concurrent/actions/workflows/haskell-ci.yml)
 
 # co-log-concurrent
 
