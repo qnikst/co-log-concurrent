@@ -23,7 +23,7 @@ jobs:
     timeout-minutes:
       60
     container:
-      image: buildpack-deps:bionic
+      image: buildpack-deps:jammy
     continue-on-error: ${{ matrix.allow-failure }}
     strategy:
       matrix:
@@ -32,7 +32,22 @@ jobs:
             compilerKind: ghc
             compilerVersion: 9.4.8
             setup-method: ghcup
+            allow-failure: true
+          - compiler: ghc-9.6.6
+            compilerKind: ghc
+            compilerVersion: 9.6.7
+            setup-method: ghcup
             allow-failure: false
+          - compiler: ghc-9.10.2
+            compilerKind: ghc
+            compilerVersion: 9.10.2
+            setup-method: ghcup
+            allow-failure: false
+          - compiler: ghc-9.12.2
+            compilerKind: ghc
+            compilerVersion: 9.12.2
+            setup-method: ghcup
+            allow-failure: true
       fail-fast: false
     steps:
       - name: apt
